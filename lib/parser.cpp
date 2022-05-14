@@ -1,6 +1,5 @@
 #include "parser.h"
 #include <cctype>
-#include <iostream>
 
 namespace kscope {
 
@@ -16,13 +15,13 @@ Box<PrototypeAST> log_err_proto(const char* msg) {
   return nullptr;
 }
 
-void Parser::dispatch() {
-  // Prime the first token.
-  std::cerr << "kscope> ";
-  next_token();
+Parser::Parser(std::istream& src) : lexer_(Lexer(src)) {
+  cur_tok_ = TK_EOF;
+}
 
+void Parser::dispatch() {
+  next_token();
   while (true) {
-    std::cerr << "kscope> ";
     switch (cur_tok_) {
     case TK_EOF:
       return;

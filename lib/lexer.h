@@ -20,6 +20,8 @@ enum Token {
 
 class Lexer {
 public:
+  Lexer(std::istream& src);
+
   /// Returns next token from standard input.
   int scan_token();
 
@@ -30,7 +32,8 @@ public:
   double get_num_value() const;
 
 private:
-  int last_char_ = ' ';
+  std::istream& src_;
+  int last_char_;
   std::string ident_str_;
   double num_val_;
 };

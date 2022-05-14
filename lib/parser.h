@@ -8,6 +8,8 @@ namespace kscope {
 
 class Parser {
 public:
+  Parser(std::istream& src);
+
   void dispatch();
 
 private:
