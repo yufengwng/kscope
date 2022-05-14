@@ -6,8 +6,6 @@
 namespace kscope {
 
 int Lexer::scan_token() {
-  last_char_ = ' ';
-
   // Skip whitespace (space, tab, etc).
   while (isblank(last_char_)) {
     last_char_ = getchar();
@@ -60,11 +58,11 @@ int Lexer::scan_token() {
   return prev_char;
 }
 
-std::string& Lexer::get_ident_str() {
+const std::string& Lexer::get_ident_str() const {
   return ident_str_;
 }
 
-double Lexer::get_num_value() {
+double Lexer::get_num_value() const {
   return num_val_;
 }
 

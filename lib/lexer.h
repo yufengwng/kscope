@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string>
+#include "common.h"
 
 namespace kscope {
 
@@ -24,13 +24,13 @@ public:
   int scan_token();
 
   /// Returns lexeme if token is identifier.
-  std::string& get_ident_str();
+  const std::string& get_ident_str() const;
 
   /// Returns numeric value if token is number.
-  double get_num_value();
+  double get_num_value() const;
 
 private:
-  int last_char_;
+  int last_char_ = ' ';
   std::string ident_str_;
   double num_val_;
 };

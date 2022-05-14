@@ -4,12 +4,6 @@ project(kscope VERSION 0.1)
 find_package(LLVM 13 REQUIRED CONFIG)
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-message("LLVM STATUS:
-  Definitions ${LLVM_DEFINITIONS}
-  Includes    ${LLVM_INCLUDE_DIRS}
-  Libraries   ${LLVM_LIBRARY_DIRS}
-  Targets     ${LLVM_TARGETS_TO_BUILD}"
-)
 add_definitions(${LLVM_DEFINITIONS})
 include_directories(${LLVM_INCLUDE_DIRS})
 link_directories(${LLVM_LIBRARY_DIRS})
