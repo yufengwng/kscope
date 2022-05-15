@@ -2,14 +2,17 @@
 
 namespace kscope {
 
-RootAST::RootAST(std::vector<Box<ItemAST>> items)
-    : items_(std::move(items)) {}
-
 PrototypeAST::PrototypeAST(const std::string& name, std::vector<std::string> args)
     : ItemAST(IK_PROTO), name_(name), args_(std::move(args)) {}
 
 FunctionAST::FunctionAST(Box<PrototypeAST> proto, Box<ExprAST> body)
     : ItemAST(IK_FUNC), proto_(std::move(proto)), body_(std::move(body)) {}
+
+Box<FunctionAST> FunctionAST::make_anon(Box<ExprAST> expr) {
+  std::vector<std::string> empty;
+  auto anon_proto = std::make_unique<PrototypeAST>("__anon__", empty);
+  return std::make_unique<FunctionAST>(std::move(anon_proto), std::move(expr));
+}
 
 NumExprAST::NumExprAST(double val)
     : ExprAST(IK_NUM_EXPR), val_(val) {}

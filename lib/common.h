@@ -1,5 +1,6 @@
 #pragma once
 
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include <memory>
 #include <string>

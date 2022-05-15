@@ -1,4 +1,6 @@
+#include "emitter.h"
 #include "parser.h"
+#include "llvm/Support/raw_ostream.h"
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -8,6 +10,7 @@ using namespace llvm;
 
 int main() {
   std::cout << "[kscope]" << std::endl;
+  Emitter emitter("__main__");
 
   std::string input;
   while (true) {
@@ -21,35 +24,49 @@ int main() {
 
     std::stringstream src(input);
     Parser parser(src);
-    auto ast = parser.parse();
+    auto items = parser.parse();
 
-    for (auto& item : ast.items()) {
-      auto ptr = item.get();
-      if (auto proto = dyn_cast<PrototypeAST>(ptr)) {
-        std::cerr << "parsed extern prototype: " << proto->name() << std::endl;
-      } else if (auto fn = dyn_cast<FunctionAST>(ptr)) {
-        std::cerr << "parsed function definition: " << fn->name() << std::endl;
-      } else if (auto expr = dyn_cast<ExprAST>(ptr)) {
-        std::cerr << "parsed top-level expression: ";
-        if (auto num_expr = dyn_cast<NumExprAST>(expr)) {
-          std::cerr << "num (" << num_expr->value() << ")\n";
-        } else if (auto var_expr = dyn_cast<VarExprAST>(expr)) {
-          std::cerr << "var (" << var_expr->name() << ")\n";
-        } else if (auto bin_expr = dyn_cast<BinExprAST>(expr)) {
-          std::cerr << "bin (" << bin_expr->op() << ")\n";
-        } else if (auto call_expr = dyn_cast<CallExprAST>(expr)) {
-          std::cerr << "call (" << call_expr->callee() << ", " << call_expr->num_args() << ")\n";
-        } else {
-          std::cerr << "unknown\n";
+    for (auto& iter : items) {
+      auto item = std::move(iter);
+      Function* fn_ir = nullptr;
+      if (auto* proto = dyn_cast<PrototypeAST>(item.get())) {
+        if ((fn_ir = emitter.codegen(proto))) {
+          std::cerr << "read extern prototype:\n";
+        }
+      } else if (auto* fn = dyn_cast<FunctionAST>(item.get())) {
+        if ((fn_ir = emitter.codegen(fn))) {
+          std::cerr << "read function definition:\n";
+        }
+      } else if (auto* expr = dyn_cast<ExprAST>(item.get())) {
+        Box<ExprAST> expr_item((ExprAST*) item.release());
+        auto anon_fn = FunctionAST::make_anon(std::move(expr_item));
+        if ((fn_ir = emitter.codegen(anon_fn.get()))) {
+          std::cerr << "read top-level expression:\n";
         }
       } else {
         std::cerr << "unknown item\n";
+      }
+
+      if (fn_ir) {
+        std::cerr << "=== llvm ===\n";
+        fn_ir->print(errs());
+        std::cerr << "============\n";
+        if (fn_ir->getName() == "__anon__") {
+          fn_ir->eraseFromParent();
+        }
       }
     }
 
     if (parser.errored()) {
       std::cerr << "note: there were some parse errors\n";
     }
+  }
+
+  std::cerr << "\n=== module ===\n";
+  emitter.mod()->print(errs(), nullptr);
+  std::cerr << "==============\n";
+  if (emitter.errored()) {
+    std::cerr << "note: there were some codegen errors\n";
   }
 
   return 0;

@@ -1,6 +1,8 @@
 #include "parser.h"
 #include <cctype>
 
+using namespace llvm;
+
 namespace kscope {
 
 Parser::Parser(std::istream& src) : lexer_(Lexer(src)) {
@@ -8,7 +10,7 @@ Parser::Parser(std::istream& src) : lexer_(Lexer(src)) {
   errored_ = false;
 }
 
-RootAST Parser::parse() {
+std::vector<Box<ItemAST>> Parser::parse() {
   std::vector<Box<ItemAST>> items;
   next_token();  // Prime first token.
 
@@ -45,7 +47,7 @@ RootAST Parser::parse() {
     }
   }
 
-  return RootAST(std::move(items));
+  return items;
 }
 
 int Parser::next_token() {
@@ -207,13 +209,13 @@ Box<ExprAST> Parser::parse_paren_expr() {
   return expr;
 }
 
-Box<ExprAST> Parser::log_err(const char* msg) {
-  std::cerr << "[error] " << msg << std::endl;
+Box<ExprAST> Parser::log_err(StringRef msg) {
+  std::cerr << "[error] " << msg.str() << std::endl;
   errored_ = true;
   return nullptr;
 }
 
-Box<PrototypeAST> Parser::log_err_proto(const char* msg) {
+Box<PrototypeAST> Parser::log_err_proto(StringRef msg) {
   log_err(msg);
   return nullptr;
 }

@@ -4,21 +4,7 @@
 
 namespace kscope {
 
-class ItemAST;
 class ExprAST;
-
-/// Root of AST, which may contain any number of items.
-class RootAST {
-public:
-  RootAST(std::vector<Box<ItemAST>> items);
-
-  const std::vector<Box<ItemAST>>& items() const {
-    return items_;
-  }
-
-private:
-  std::vector<Box<ItemAST>> items_;
-};
 
 /// Base class for all items in AST.
 class ItemAST {
@@ -34,7 +20,7 @@ public:
     IK_LAST_EXPR,
   };
 
-  virtual ~ItemAST() {}
+  virtual ~ItemAST() = default;
 
   ItemKind kind() const {
     return kind_;
@@ -59,6 +45,14 @@ public:
     return name_;
   }
 
+  const std::vector<std::string>& args() const {
+    return args_;
+  }
+
+  size_t num_args() const {
+    return args_.size();
+  }
+
 private:
   std::string name_;
   std::vector<std::string> args_;
@@ -71,10 +65,17 @@ public:
     return item->kind() == IK_FUNC;
   }
 
+  /// Wrap the expression in an anonymous function definition.
+  static Box<FunctionAST> make_anon(Box<ExprAST> expr);
+
   FunctionAST(Box<PrototypeAST> proto, Box<ExprAST> body);
 
-  const std::string& name() const {
-    return proto_->name();
+  const PrototypeAST* proto() const {
+    return proto_.get();
+  }
+
+  const ExprAST* body() const {
+    return body_.get();
   }
 
 private:
@@ -89,7 +90,7 @@ public:
     return IK_EXPR <= item->kind() && item->kind() <= IK_LAST_EXPR;
   }
 
-  virtual ~ExprAST() {}
+  virtual ~ExprAST() = default;
 
 protected:
   ExprAST(ItemKind expr_kind) : ItemAST(expr_kind) {}
@@ -142,6 +143,14 @@ public:
     return op_;
   }
 
+  const ExprAST* lhs() const {
+    return lhs_.get();
+  }
+
+  const ExprAST* rhs() const {
+    return rhs_.get();
+  }
+
 private:
   char op_;
   Box<ExprAST> lhs_, rhs_;
@@ -158,6 +167,10 @@ public:
 
   const std::string& callee() const {
     return callee_;
+  }
+
+  const std::vector<Box<ExprAST>>& args() const {
+    return args_;
   }
 
   size_t num_args() const {

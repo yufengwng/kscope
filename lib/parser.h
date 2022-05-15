@@ -2,6 +2,7 @@
 
 #include "ast.h"
 #include "lexer.h"
+#include <iostream>
 
 namespace kscope {
 
@@ -10,7 +11,7 @@ public:
   Parser(std::istream& src);
 
   /// top ::= definition | external | expr | ';'
-  RootAST parse();
+  std::vector<Box<ItemAST>> parse();
 
   bool errored() const {
     return errored_;
@@ -47,9 +48,9 @@ private:
   Box<ExprAST> parse_paren_expr();
 
   /// Helper for error handling.
-  Box<ExprAST> log_err(const char* msg);
+  Box<ExprAST> log_err(llvm::StringRef msg);
   /// Helper for error handling typed to prototypes.
-  Box<PrototypeAST> log_err_proto(const char* msg);
+  Box<PrototypeAST> log_err_proto(llvm::StringRef msg);
 };
 
 } // namespace kscope
