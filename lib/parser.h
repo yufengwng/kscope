@@ -1,6 +1,5 @@
 #pragma once
 
-#include "common.h"
 #include "ast.h"
 #include "lexer.h"
 
@@ -10,11 +9,17 @@ class Parser {
 public:
   Parser(std::istream& src);
 
-  void dispatch();
+  /// top ::= definition | external | expr | ';'
+  RootAST parse();
+
+  bool errored() const {
+    return errored_;
+  }
 
 private:
   Lexer lexer_;
   int cur_tok_;
+  bool errored_;
 
   /// Reads another token from lexer and updates `cur_tok`.
   int next_token();
@@ -22,8 +27,6 @@ private:
   /// Get precedence of pending binary operator token.
   int get_bin_precedence();
 
-  /// top_level_expr ::= expr
-  Box<FunctionAST> parse_top_level_expr();
   /// external ::= 'extern' prototype
   Box<PrototypeAST> parse_extern();
   /// definition ::= 'def' prototype expr
@@ -42,6 +45,11 @@ private:
   Box<ExprAST> parse_num_expr();
   /// paren_expr ::= '(' expr ')'
   Box<ExprAST> parse_paren_expr();
+
+  /// Helper for error handling.
+  Box<ExprAST> log_err(const char* msg);
+  /// Helper for error handling typed to prototypes.
+  Box<PrototypeAST> log_err_proto(const char* msg);
 };
 
 } // namespace kscope

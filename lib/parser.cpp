@@ -3,54 +3,49 @@
 
 namespace kscope {
 
-/// Helper for error handling.
-Box<ExprAST> log_err(const char* msg) {
-  std::cerr << "[error] " << msg << std::endl;
-  return nullptr;
-}
-
-/// Helper for error handling typed to prototypes.
-Box<PrototypeAST> log_err_proto(const char* msg) {
-  log_err(msg);
-  return nullptr;
-}
-
 Parser::Parser(std::istream& src) : lexer_(Lexer(src)) {
   cur_tok_ = TK_EOF;
+  errored_ = false;
 }
 
-void Parser::dispatch() {
-  next_token();
-  while (true) {
+RootAST Parser::parse() {
+  std::vector<Box<ItemAST>> items;
+  next_token();  // Prime first token.
+
+  bool done = false;
+  while (!done) {
     switch (cur_tok_) {
     case TK_EOF:
-      return;
+      done = true;
+      break;
     case ';':
       next_token();  // Ignore top-level semicolons.
       break;
     case TK_DEF:
-      if (parse_definition()) {
-        std::cerr << "parsed function definition" << std::endl;
+      if (auto def = parse_definition()) {
+        items.push_back(std::move(def));
       } else {
         next_token();  // Skip token for error recovery.
       }
       break;
     case TK_EXTERN:
-      if (parse_extern()) {
-        std::cerr << "parsed an extern" << std::endl;
+      if (auto proto = parse_extern()) {
+        items.push_back(std::move(proto));
       } else {
         next_token();  // Skip token for error recovery.
       }
       break;
     default:
-      if (parse_top_level_expr()) {
-        std::cerr << "parsed top-level expression" << std::endl;
+      if (auto expr = parse_expr()) {
+        items.push_back(std::move(expr));
       } else {
         next_token();  // Skip token for error recovery.
       }
       break;
     }
-  }  
+  }
+
+  return RootAST(std::move(items));
 }
 
 int Parser::next_token() {
@@ -59,9 +54,6 @@ int Parser::next_token() {
 }
 
 int Parser::get_bin_precedence() {
-  if (!isascii(cur_tok_)) {
-    return -1;
-  }
   switch (cur_tok_) {
   case '<': return 10;  // lowest
   case '+': return 20;
@@ -69,14 +61,6 @@ int Parser::get_bin_precedence() {
   case '*': return 40;  // highest
   default:  return -1;
   }
-}
-
-Box<FunctionAST> Parser::parse_top_level_expr() {
-  if (auto expr = parse_expr()) {
-    auto anon_proto = std::make_unique<PrototypeAST>("", std::vector<std::string>());
-    return std::make_unique<FunctionAST>(std::move(anon_proto), std::move(expr));
-  }
-  return nullptr;
 }
 
 Box<PrototypeAST> Parser::parse_extern() {
@@ -221,6 +205,17 @@ Box<ExprAST> Parser::parse_paren_expr() {
   }
   next_token();  // Consume ')'.
   return expr;
+}
+
+Box<ExprAST> Parser::log_err(const char* msg) {
+  std::cerr << "[error] " << msg << std::endl;
+  errored_ = true;
+  return nullptr;
+}
+
+Box<PrototypeAST> Parser::log_err_proto(const char* msg) {
+  log_err(msg);
+  return nullptr;
 }
 
 } // namespace kscope
