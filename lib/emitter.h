@@ -21,7 +21,7 @@ public:
   llvm::Function* codegen(const PrototypeAST* ast);
 
   /// Returns a shared pointer to the current LLVM module.
-  const llvm::Module* mod() const {
+  llvm::Module* mod() const {
     return module_.get();
   }
 

@@ -138,7 +138,7 @@ Value* Emitter::emit_bin_expr(const BinExprAST* bin) {
     return builder_->CreateUIToFP(res, Type::getDoubleTy(*ctx_));
   }
   default:
-    return log_err("invalid binary operator: " + bin->op());
+    return log_err("invalid binary operator: " + std::string(1, bin->op()));
   }
 }
 

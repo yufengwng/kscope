@@ -1,5 +1,6 @@
 #include "emitter.h"
 #include "parser.h"
+#include "runtime.h"
 #include "llvm/Support/raw_ostream.h"
 #include <iostream>
 #include <sstream>
@@ -11,6 +12,7 @@ using namespace llvm;
 int main() {
   std::cout << "[kscope]" << std::endl;
   Emitter emitter("__main__");
+  Optimizer opt(emitter.mod());
 
   std::string input;
   while (true) {
@@ -48,9 +50,10 @@ int main() {
       }
 
       if (fn_ir) {
-        std::cerr << "=== llvm ===\n";
+        std::cerr << "  optimizing function: " << fn_ir->getName().str() << std::endl;
+        opt.run(fn_ir);
+        std::cerr << "  finished optimizing function\n";
         fn_ir->print(errs());
-        std::cerr << "============\n";
         if (fn_ir->getName() == "__anon__") {
           fn_ir->eraseFromParent();
         }
