@@ -1,8 +1,10 @@
 #pragma once
 
 #include "ast.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Value.h"
@@ -10,20 +12,32 @@
 
 namespace kscope {
 
+class Optimizer {
+public:
+  Optimizer(llvm::Module* mod);
+
+  /// Optimize the given function.
+  void run(llvm::Function* fn);
+
+private:
+  Box<llvm::legacy::FunctionPassManager> fpm_;
+};
+
 class Emitter {
 public:
-  Emitter(const std::string& mod_name);
+  Emitter(const std::string& mod_name, const llvm::DataLayout& layout);
+
+  /// Returns the current module and initializes a fresh new module.
+  Box<llvm::Module> take_mod();
+
+  /// Track the given prototype in the mapping.
+  void register_proto(Box<PrototypeAST> proto);
 
   /// Generate LLVM IR for function definition.
   llvm::Function* codegen(const FunctionAST* ast);
 
   /// Generate LLVM IR for extern prototype.
   llvm::Function* codegen(const PrototypeAST* ast);
-
-  /// Returns a shared pointer to the current LLVM module.
-  llvm::Module* mod() const {
-    return module_.get();
-  }
 
   bool errored() const {
     return errored_;
@@ -34,7 +48,11 @@ private:
   Box<llvm::LLVMContext> ctx_;
   Box<llvm::Module> module_;
   Box<llvm::IRBuilder<>> builder_;
+  Box<Optimizer> opt_;
   std::map<std::string, llvm::Value*> locals_;
+  std::map<std::string, Box<PrototypeAST>> protos_;
+
+  llvm::Function* lookup_fn(const std::string& name);
 
   llvm::Function* emit_def(const FunctionAST* def);
   llvm::Function* emit_proto(const PrototypeAST* proto);

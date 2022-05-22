@@ -61,6 +61,8 @@ private:
 /// A function definition, with its prototype and body.
 class FunctionAST : public ItemAST {
 public:
+  static std::string ANON_NAME;
+
   static bool classof(const ItemAST* item) {
     return item->kind() == IK_FUNC;
   }
@@ -69,6 +71,8 @@ public:
   static Box<FunctionAST> make_anon(Box<ExprAST> expr);
 
   FunctionAST(Box<PrototypeAST> proto, Box<ExprAST> body);
+
+  Box<PrototypeAST> copy_proto() const;
 
   const PrototypeAST* proto() const {
     return proto_.get();

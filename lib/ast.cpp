@@ -5,13 +5,20 @@ namespace kscope {
 PrototypeAST::PrototypeAST(const std::string& name, std::vector<std::string> args)
     : ItemAST(IK_PROTO), name_(name), args_(std::move(args)) {}
 
+std::string FunctionAST::ANON_NAME = "__anon__";
+
 FunctionAST::FunctionAST(Box<PrototypeAST> proto, Box<ExprAST> body)
     : ItemAST(IK_FUNC), proto_(std::move(proto)), body_(std::move(body)) {}
 
 Box<FunctionAST> FunctionAST::make_anon(Box<ExprAST> expr) {
   std::vector<std::string> empty;
-  auto anon_proto = std::make_unique<PrototypeAST>("__anon__", empty);
+  auto anon_proto = std::make_unique<PrototypeAST>(ANON_NAME, empty);
   return std::make_unique<FunctionAST>(std::move(anon_proto), std::move(expr));
+}
+
+Box<PrototypeAST> FunctionAST::copy_proto() const {
+    std::vector<std::string> args(proto_->args());
+    return std::make_unique<PrototypeAST>(proto_->name(), args);
 }
 
 NumExprAST::NumExprAST(double val)

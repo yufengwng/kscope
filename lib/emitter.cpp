@@ -6,36 +6,84 @@
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Transforms/InstCombine/InstCombine.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
 #include <iostream>
 
 using namespace llvm;
 
 namespace kscope {
 
-Emitter::Emitter(const std::string& mod_name) {
+Optimizer::Optimizer(Module* mod) {
+  fpm_ = std::make_unique<legacy::FunctionPassManager>(mod);
+  // Simple peephole and bit-twiddling optimizations.
+  fpm_->add(createInstructionCombiningPass());
+  // Reassociate expressions into a more canonical form.
+  fpm_->add(createReassociatePass());
+  // Elimiate redundant expressions.
+  fpm_->add(createGVNPass());
+  // Simplify control flow graph.
+  fpm_->add(createCFGSimplificationPass());
+  fpm_->doInitialization();
+}
+
+void Optimizer::run(Function* fn) {
+  fpm_->run(*fn);
+}
+
+Emitter::Emitter(const std::string& mod_name, const DataLayout& layout) {
   ctx_ = std::make_unique<LLVMContext>();
-  module_ = std::make_unique<Module>(mod_name, *ctx_);
   builder_ = std::make_unique<IRBuilder<>>(*ctx_);
+  module_ = std::make_unique<Module>(mod_name, *ctx_);
+  module_->setDataLayout(layout);
+  opt_ = std::make_unique<Optimizer>(module_.get());
   errored_ = false;
 }
 
+Box<llvm::Module> Emitter::take_mod() {
+  auto curr_mod = std::move(module_);
+  module_ = std::make_unique<Module>(curr_mod->getName(), *ctx_);
+  module_->setDataLayout(curr_mod->getDataLayout());
+  opt_ = std::make_unique<Optimizer>(module_.get());
+  errored_ = false;
+  return curr_mod;
+}
+
+void Emitter::register_proto(Box<PrototypeAST> proto) {
+  protos_[proto->name()] = std::move(proto);
+}
+
 Function* Emitter::codegen(const FunctionAST* ast) {
+  errored_ = false;
   return emit_def(ast);
 }
 
 Function* Emitter::codegen(const PrototypeAST* ast) {
+  errored_ = false;
   return emit_proto(ast);
+}
+
+Function* Emitter::lookup_fn(const std::string& name) {
+  if (auto* fn = module_->getFunction(name)) {
+    return fn;
+  }
+  auto iter = protos_.find(name);
+  if (iter != protos_.end()) {
+    return codegen(iter->second.get());
+  }
+  return nullptr;
 }
 
 Function* Emitter::emit_def(const FunctionAST* def) {
   auto* proto = def->proto();
-  auto* fn = module_->getFunction(proto->name());
+  protos_[proto->name()] = def->copy_proto();
+  auto* fn = lookup_fn(proto->name());
   if (!fn) {
-    fn = emit_proto(proto);
-    if (!fn) {
-      return nullptr;
-    }
-  } else {
+    return nullptr;
+  }
+
+  if (fn->empty()) {
     // Validate existing declaration matches prototype.
     if (fn->getName() != proto->name()) {
       return log_err_fn("function name mismatch: " + proto->name());
@@ -52,10 +100,6 @@ Function* Emitter::emit_def(const FunctionAST* def) {
     }
   }
 
-  if (!fn->empty()) {
-    return log_err_fn("function cannot be redefined: " + proto->name());
-  }
-
   auto* bb = BasicBlock::Create(*ctx_, "entry", fn);
   builder_->SetInsertPoint(bb);
 
@@ -65,15 +109,23 @@ Function* Emitter::emit_def(const FunctionAST* def) {
   }
 
   if (auto* val = emit_expr(def->body())) {
+    // Finish the function.
     builder_->CreateRet(val);
+
+    // Validate generated IR.
     std::string buf;
     raw_string_ostream stream(buf);
     if (verifyFunction(*fn, &stream)) {
       return log_err_fn("incorrect llvm function: " + stream.str());
     }
+
+    // Optimize the code.
+    opt_->run(fn);
+
     return fn;
   }
 
+  // There was an error so remove the function.
   fn->eraseFromParent();
   return nullptr;
 }
@@ -144,7 +196,7 @@ Value* Emitter::emit_bin_expr(const BinExprAST* bin) {
 
 Value* Emitter::emit_call_expr(const CallExprAST* call) {
   // Lookup name in module's global symbol table.
-  Function* callee = module_->getFunction(call->callee());
+  Function* callee = lookup_fn(call->callee());
   if (!callee) {
     return log_err("unknown function: " + call->callee());
   }

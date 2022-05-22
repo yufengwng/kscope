@@ -1,9 +1,9 @@
 add_library(kscope SHARED
   ast.cpp
   emitter.cpp
+  executor.cpp
   lexer.cpp
   parser.cpp
-  runtime.cpp
 )
 
 target_include_directories(kscope PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
