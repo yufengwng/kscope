@@ -99,11 +99,12 @@ public:
       // JIT the module containing the anon function.
       auto mod = emitter_->take_mod();
       auto tracker = jit_->add_module(std::move(mod));
-      auto symbol = jit_->lookup(FunctionAST::ANON_NAME);
-      assert(symbol && "anon function not found");
 
       // Get the symbol address, cast to native function, and call it.
-      double (*fp)() = (double (*)()) (intptr_t) symbol->getAddress();
+      auto addr = jit_->lookup(FunctionAST::ANON_NAME);
+      assert(addr && "anon function not found");
+
+      double (*fp)() = addr->toPtr<double()>();
       double res = fp();
       std::cerr << "evaluated to: " << res << std::endl;
 

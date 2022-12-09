@@ -17,9 +17,10 @@ public:
 
   Executor(Box<llvm::orc::LLJIT> lljit);
 
-  llvm::orc::ResourceTrackerSP add_module(Box<llvm::Module> mod, llvm::orc::ResourceTrackerSP tracker = nullptr);
+  llvm::orc::ResourceTrackerSP add_module(Box<llvm::Module> mod,
+                                          llvm::orc::ResourceTrackerSP tracker = nullptr);
   void remove_module(llvm::orc::ResourceTrackerSP tracker);
-  llvm::Expected<llvm::JITEvaluatedSymbol> lookup(llvm::StringRef name);
+  llvm::Expected<llvm::orc::ExecutorAddr> lookup(llvm::StringRef name);
 
   const llvm::DataLayout& data_layout() const {
     return lljit_->getDataLayout();

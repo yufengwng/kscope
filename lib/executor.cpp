@@ -27,8 +27,8 @@ Box<Executor> Executor::create() {
 
 void Executor::init_native_target() {
   InitializeNativeTarget();
-  InitializeNativeTargetAsmPrinter();
   InitializeNativeTargetAsmParser();
+  InitializeNativeTargetAsmPrinter();
 }
 
 ResourceTrackerSP Executor::add_module(Box<Module> mod, ResourceTrackerSP tracker) {
@@ -45,7 +45,7 @@ void Executor::remove_module(ResourceTrackerSP tracker) {
   cantFail(tracker->remove());
 }
 
-Expected<JITEvaluatedSymbol> Executor::lookup(StringRef name) {
+Expected<ExecutorAddr> Executor::lookup(StringRef name) {
   return lljit_->lookup(name);
 }
 
