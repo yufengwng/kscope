@@ -41,15 +41,15 @@ public:
 
       for (auto& iter : items) {
         auto item = std::move(iter);
-        if (auto* proto = llvm::dyn_cast<PrototypeAST>(item.get())) {
-          Box<PrototypeAST> proto_item((PrototypeAST*) item.release());
-          handle_extern(std::move(proto_item));
-        } else if (auto* def = llvm::dyn_cast<FunctionAST>(item.get())) {
-          Box<FunctionAST> def_item((FunctionAST*) item.release());
-          handle_define(std::move(def_item));
-        } else if (auto* expr = llvm::dyn_cast<ExprAST>(item.get())) {
-          Box<ExprAST> expr_item((ExprAST*) item.release());
-          auto anon_fn = FunctionAST::make_anon(std::move(expr_item));
+        if (llvm::dyn_cast<PrototypeAST>(item.get())) {
+          Box<PrototypeAST> proto((PrototypeAST*) item.release());
+          handle_extern(std::move(proto));
+        } else if (llvm::dyn_cast<FunctionAST>(item.get())) {
+          Box<FunctionAST> def((FunctionAST*) item.release());
+          handle_define(std::move(def));
+        } else if (llvm::dyn_cast<ExprAST>(item.get())) {
+          Box<ExprAST> expr((ExprAST*) item.release());
+          auto anon_fn = FunctionAST::make_anon(std::move(expr));
           handle_top_level_expr(std::move(anon_fn));
         } else {
           std::cerr << "unknown item" << std::endl;
@@ -61,8 +61,8 @@ public:
   }
 
   void handle_extern(Box<PrototypeAST> proto) {
-    llvm::Function* fn_ir;
-    if ((fn_ir = emitter_->codegen(proto.get())) && !emitter_->errored()) {
+    auto* fn_ir = emitter_->codegen(proto.get());
+    if (fn_ir != nullptr && !emitter_->errored()) {
       std::cerr << "read extern prototype:\n";
       fn_ir->print(llvm::errs());
       emitter_->register_proto(std::move(proto));
@@ -72,27 +72,28 @@ public:
   }
 
   void handle_define(Box<FunctionAST> def) {
-    llvm::Function* fn_ir;
-    if ((fn_ir = emitter_->codegen(def.get())) && !emitter_->errored()) {
+    auto* fn_ir = emitter_->codegen(def.get());
+    if (fn_ir != nullptr && !emitter_->errored()) {
       std::cerr << "read function definition:\n";
       fn_ir->print(llvm::errs());
 
-      auto iter = trackers_.find(fn_ir->getName().str());
+      auto fn_name = fn_ir->getName().str();
+      auto iter = trackers_.find(fn_name);
       if (iter != trackers_.end()) {
         jit_->remove_module(iter->second);
       }
 
       auto mod = emitter_->take_mod();
       auto tracker = jit_->add_module(std::move(mod));
-      trackers_[fn_ir->getName().str()] = tracker;
+      trackers_[fn_name] = tracker;
     } else {
       std::cerr << "note: error during codegen of function" << std::endl;
     }
   }
 
   void handle_top_level_expr(Box<FunctionAST> anon_fn) {
-    llvm::Function* fn_ir;
-    if ((fn_ir = emitter_->codegen(anon_fn.get())) && !emitter_->errored()) {
+    auto* fn_ir = emitter_->codegen(anon_fn.get());
+    if (fn_ir != nullptr && !emitter_->errored()) {
       std::cerr << "read top-level expression:\n";
       fn_ir->print(llvm::errs());
 

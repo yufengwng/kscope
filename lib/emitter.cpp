@@ -21,7 +21,7 @@ Optimizer::Optimizer(Module* mod) {
   fpm_->add(createInstructionCombiningPass());
   // Reassociate expressions into a more canonical form.
   fpm_->add(createReassociatePass());
-  // Elimiate redundant expressions.
+  // Eliminate redundant expressions.
   fpm_->add(createGVNPass());
   // Simplify control flow graph.
   fpm_->add(createCFGSimplificationPass());
@@ -70,9 +70,25 @@ Function* Emitter::lookup_fn(const std::string& name) {
   }
   auto iter = protos_.find(name);
   if (iter != protos_.end()) {
-    return codegen(iter->second.get());
+    return emit_proto(iter->second.get());
   }
   return nullptr;
+}
+
+Function* Emitter::emit_proto(const PrototypeAST* proto) {
+  auto* double_ty = Type::getDoubleTy(*ctx_);
+  std::vector<Type*> param_tys(proto->num_args(), double_ty);
+  auto* fn_ty = FunctionType::get(double_ty, param_tys, false);
+  auto* fn = Function::Create(fn_ty, Function::ExternalLinkage,
+                              proto->name(), module_.get());
+
+  size_t idx = 0;
+  for (auto& arg : fn->args()) {
+    arg.setName(proto->args()[idx]);
+    idx++;
+  }
+
+  return fn;
 }
 
 Function* Emitter::emit_def(const FunctionAST* def) {
@@ -128,21 +144,6 @@ Function* Emitter::emit_def(const FunctionAST* def) {
   // There was an error so remove the function.
   fn->eraseFromParent();
   return nullptr;
-}
-
-Function* Emitter::emit_proto(const PrototypeAST* proto) {
-  auto* double_ty = Type::getDoubleTy(*ctx_);
-  std::vector<Type*> param_tys(proto->num_args(), double_ty);
-  auto* fn_ty = FunctionType::get(double_ty, param_tys, false);
-  auto* fn = Function::Create(fn_ty, Function::ExternalLinkage, proto->name(), module_.get());
-
-  size_t idx = 0;
-  for (auto& arg : fn->args()) {
-    arg.setName(proto->args()[idx]);
-    idx++;
-  }
-
-  return fn;
 }
 
 Value* Emitter::emit_expr(const ExprAST* expr) {

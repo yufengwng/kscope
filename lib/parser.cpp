@@ -5,7 +5,8 @@ using namespace llvm;
 
 namespace kscope {
 
-Parser::Parser(std::istream& src) : lexer_(Lexer(src)) {
+Parser::Parser(std::istream& src)
+    : lexer_(Lexer(src)) {
   cur_tok_ = TK_EOF;
   errored_ = false;
 }

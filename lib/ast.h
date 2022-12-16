@@ -12,12 +12,12 @@ public:
   enum ItemKind {
     IK_PROTO,
     IK_FUNC,
-    IK_EXPR,
+    IK_EXPR_,
     IK_NUM_EXPR,
     IK_VAR_EXPR,
     IK_BIN_EXPR,
     IK_CALL_EXPR,
-    IK_LAST_EXPR,
+    IK_LAST_EXPR_,
   };
 
   virtual ~ItemAST() = default;
@@ -61,7 +61,7 @@ private:
 /// A function definition, with its prototype and body.
 class FunctionAST : public ItemAST {
 public:
-  static std::string ANON_NAME;
+  inline static std::string ANON_NAME = "__anon__";
 
   static bool classof(const ItemAST* item) {
     return item->kind() == IK_FUNC;
@@ -91,7 +91,7 @@ private:
 class ExprAST : public ItemAST {
 public:
   static bool classof(const ItemAST* item) {
-    return IK_EXPR <= item->kind() && item->kind() <= IK_LAST_EXPR;
+    return IK_EXPR_ < item->kind() && item->kind() < IK_LAST_EXPR_;
   }
 
   virtual ~ExprAST() = default;

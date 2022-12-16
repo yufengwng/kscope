@@ -54,8 +54,8 @@ private:
 
   llvm::Function* lookup_fn(const std::string& name);
 
-  llvm::Function* emit_def(const FunctionAST* def);
   llvm::Function* emit_proto(const PrototypeAST* proto);
+  llvm::Function* emit_def(const FunctionAST* def);
   llvm::Value* emit_expr(const ExprAST* expr);
   llvm::Value* emit_num_expr(const NumExprAST* num);
   llvm::Value* emit_var_expr(const VarExprAST* var);

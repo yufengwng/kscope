@@ -3,7 +3,8 @@
 
 namespace kscope {
 
-Lexer::Lexer(std::istream& src) : src_(src) {
+Lexer::Lexer(std::istream& src)
+    : src_(src) {
   last_char_ = ' ';
 }
 
