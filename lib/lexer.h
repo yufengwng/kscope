@@ -11,12 +11,16 @@ enum Token {
   TK_EOF = -1,
 
   // Commands
-  TK_DEF = -2,
-  TK_EXTERN = -3,
+  TK_DEF = -11,
+  TK_EXTERN = -12,
+
+  // Keywords
+  TK_IF = -21,
+  TK_ELSE = -22,
 
   // Primary
-  TK_IDENT = -4,
-  TK_NUM = -5,
+  TK_IDENT = -51,
+  TK_NUM = -52,
 };
 
 class Lexer {

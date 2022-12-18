@@ -29,6 +29,10 @@ int Lexer::scan_token() {
       return TK_DEF;
     } else if (ident_str_ == "extern") {
       return TK_EXTERN;
+    } else if (ident_str_ == "if") {
+      return TK_IF;
+    } else if (ident_str_ == "else") {
+      return TK_ELSE;
     } else {
       return TK_IDENT;
     }

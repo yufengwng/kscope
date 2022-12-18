@@ -31,4 +31,10 @@ BinExprAST::BinExprAST(char op, Box<ExprAST> lhs, Box<ExprAST> rhs)
 CallExprAST::CallExprAST(const std::string& callee, std::vector<Box<ExprAST>> args)
     : ExprAST(IK_CALL_EXPR), callee_(callee), args_(std::move(args)) {}
 
+IfExprAST::IfExprAST(Box<ExprAST> cond, Box<ExprAST> then_case, Box<ExprAST> else_case)
+    : ExprAST(IK_IF_EXPR),
+      cond_(std::move(cond)),
+      then_(std::move(then_case)),
+      else_(std::move(else_case)) {}
+
 } // namespace kscope

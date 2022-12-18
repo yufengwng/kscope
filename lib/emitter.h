@@ -61,6 +61,7 @@ private:
   llvm::Value* emit_var_expr(const VarExprAST* var);
   llvm::Value* emit_bin_expr(const BinExprAST* bin);
   llvm::Value* emit_call_expr(const CallExprAST* call);
+  llvm::Value* emit_if_expr(const IfExprAST* ifexpr);
 
   /// Helper for error handling.
   llvm::Value* log_err(llvm::StringRef msg);

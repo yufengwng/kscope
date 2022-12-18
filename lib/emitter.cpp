@@ -155,6 +155,8 @@ Value* Emitter::emit_expr(const ExprAST* expr) {
     return emit_bin_expr(bin);
   } else if (auto* call = dyn_cast<CallExprAST>(expr)) {
     return emit_call_expr(call);
+  } else if (auto* ifexpr = dyn_cast<IfExprAST>(expr)) {
+    return emit_if_expr(ifexpr);
   } else {
     return nullptr;
   }
@@ -217,6 +219,52 @@ Value* Emitter::emit_call_expr(const CallExprAST* call) {
   }
 
   return builder_->CreateCall(callee, arg_vals);
+}
+
+Value* Emitter::emit_if_expr(const IfExprAST* ifexpr) {
+  // Create blocks for 'then' and 'else' cases.
+  auto* fn = builder_->GetInsertBlock()->getParent();
+  auto* bb_then = BasicBlock::Create(*ctx_, "then");
+  auto* bb_else = BasicBlock::Create(*ctx_, "else");
+  auto* bb_merge = BasicBlock::Create(*ctx_, "ifend");
+
+  // Emit the if condition.
+  auto* cond_val = emit_expr(ifexpr->cond_expr());
+  if (!cond_val) {
+    return nullptr;
+  }
+  cond_val = builder_->CreateFCmpONE(
+      cond_val, ConstantFP::get(*ctx_, APFloat(0.0)));
+  builder_->CreateCondBr(cond_val, bb_then, bb_else);
+
+  // Emit the 'then' branch.
+  fn->getBasicBlockList().push_back(bb_then);
+  builder_->SetInsertPoint(bb_then);
+  auto* then_val = emit_expr(ifexpr->then_expr());
+  if (!then_val) {
+    return nullptr;
+  }
+  builder_->CreateBr(bb_merge);
+  bb_then = builder_->GetInsertBlock();
+
+  // Emit the 'else' branch.
+  fn->getBasicBlockList().push_back(bb_else);
+  builder_->SetInsertPoint(bb_else);
+  auto* else_val = emit_expr(ifexpr->else_expr());
+  if (!else_val) {
+    return nullptr;
+  }
+  builder_->CreateBr(bb_merge);
+  bb_else = builder_->GetInsertBlock();
+
+  // Emit the merge block.
+  fn->getBasicBlockList().push_back(bb_merge);
+  builder_->SetInsertPoint(bb_merge);
+  auto* phi = builder_->CreatePHI(Type::getDoubleTy(*ctx_), 2, "ifphi");
+  phi->addIncoming(then_val, bb_then);
+  phi->addIncoming(else_val, bb_else);
+
+  return phi;
 }
 
 Value* Emitter::log_err(StringRef msg) {

@@ -13,6 +13,7 @@ public:
     IK_PROTO,
     IK_FUNC,
     IK_EXPR_,
+    IK_IF_EXPR,
     IK_NUM_EXPR,
     IK_VAR_EXPR,
     IK_BIN_EXPR,
@@ -184,6 +185,31 @@ public:
 private:
   std::string callee_;
   std::vector<Box<ExprAST>> args_;
+};
+
+/// Represents an if/else expression.
+class IfExprAST : public ExprAST {
+public:
+  static bool classof(const ItemAST* item) {
+    return item->kind() == IK_IF_EXPR;
+  }
+
+  IfExprAST(Box<ExprAST> cond, Box<ExprAST> then_case, Box<ExprAST> else_case);
+
+  const ExprAST* cond_expr() const {
+    return cond_.get();
+  }
+
+  const ExprAST* then_expr() const {
+    return then_.get();
+  }
+
+  const ExprAST* else_expr() const {
+    return else_.get();
+  }
+
+private:
+  Box<ExprAST> cond_, then_, else_;
 };
 
 } // namespace kscope

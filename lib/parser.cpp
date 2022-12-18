@@ -153,6 +153,8 @@ Box<ExprAST> Parser::parse_primary() {
     return parse_num_expr();
   case '(':
     return parse_paren_expr();
+  case TK_IF:
+    return parse_if_expr();
   default:
     return log_err("unknown token when expecting an expression");
   }
@@ -208,6 +210,38 @@ Box<ExprAST> Parser::parse_paren_expr() {
   }
   next_token();  // Consume ')'.
   return expr;
+}
+
+Box<ExprAST> Parser::parse_if_expr() {
+  next_token();  // Consume 'if'.
+
+  auto cond = parse_expr();
+  if (!cond) {
+    return nullptr;
+  }
+
+  if (cur_tok_ != ':') {
+    return log_err("expected ':'");
+  }
+  next_token();  // Consume ':'.
+
+  auto then_case = parse_expr();
+  if (!then_case) {
+    return nullptr;
+  }
+
+  if (cur_tok_ != TK_ELSE) {
+    return log_err("expected 'else'");
+  }
+  next_token();  // Consume 'else'.
+
+  auto else_case = parse_expr();
+  if (!else_case) {
+    return nullptr;
+  }
+
+  return std::make_unique<IfExprAST>(
+      std::move(cond), std::move(then_case), std::move(else_case));
 }
 
 Box<ExprAST> Parser::log_err(StringRef msg) {
