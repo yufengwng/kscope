@@ -2,11 +2,12 @@
 
 #include "common.h"
 #include <iostream>
+#include <optional>
 
 namespace kscope {
 
 /// Represents the known lexical tokens in language. Lexer returns [0-255] if
-/// it is an unknown character.
+/// it is not one of these specified tokens.
 enum Token {
   TK_EOF = -1,
 
@@ -41,6 +42,11 @@ private:
   int last_char_;
   std::string ident_str_;
   double num_val_;
+  std::optional<int> lookahead_;
+
+  bool is_eof();
+  int next_char();
+  int peek_char();
 };
 
 } // namespace kscope
