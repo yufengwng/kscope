@@ -4,6 +4,7 @@ add_library(kscope SHARED
   executor.cpp
   lexer.cpp
   parser.cpp
+  std.cpp
 )
 
 llvm_map_components_to_libnames(llvm_libs
