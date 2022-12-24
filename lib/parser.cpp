@@ -148,19 +148,21 @@ Box<ExprAST> Parser::parse_bin_rhs(int prec, Box<ExprAST> lhs) {
 Box<ExprAST> Parser::parse_primary() {
   switch (cur_tok_) {
   case TK_IDENT:
-    return parse_ident_expr();
+    return parse_ident_or_call_expr();
   case TK_NUM:
     return parse_num_expr();
   case '(':
     return parse_paren_expr();
   case TK_IF:
     return parse_if_expr();
+  case TK_FOR:
+    return parse_for_expr();
   default:
     return log_err("unknown token when expecting an expression");
   }
 }
 
-Box<ExprAST> Parser::parse_ident_expr() {
+Box<ExprAST> Parser::parse_ident_or_call_expr() {
   std::string name = lexer_.get_ident_str();
   next_token();  // Consume ident.
 
@@ -242,6 +244,59 @@ Box<ExprAST> Parser::parse_if_expr() {
 
   return std::make_unique<IfExprAST>(
       std::move(cond), std::move(then_case), std::move(else_case));
+}
+
+Box<ExprAST> Parser::parse_for_expr() {
+  next_token();  // Consume 'for'.
+
+  if (cur_tok_ != TK_IDENT) {
+    return log_err("expected identifier after 'for'");
+  }
+  std::string name = lexer_.get_ident_str();
+  next_token();  // Consume ident.
+
+  if (cur_tok_ != TK_IN) {
+    return log_err("expected 'in'");
+  }
+  next_token();  // Consume 'in'.
+
+  auto init = parse_expr();
+  if (!init) {
+    return nullptr;
+  }
+
+  if (cur_tok_ != TK_DOT2) {
+    return log_err("expected '..'");
+  }
+  next_token();  // Consume '..'.
+
+  auto stop =  parse_expr();
+  if (!stop) {
+    return nullptr;
+  }
+
+  Box<ExprAST> step;
+  if (cur_tok_ == ',') {
+    next_token();  // Consume comma.
+    step = parse_expr();
+    if (!step) {
+      return nullptr;
+    }
+  }
+
+  if (cur_tok_ != ':') {
+    return log_err("expected ':'");
+  }
+  next_token();  // Consume ':'.
+
+  auto body = parse_expr();
+  if (!body) {
+    return nullptr;
+  }
+
+  return std::make_unique<ForExprAST>(
+      name, std::move(init), std::move(stop),
+      std::move(body), std::move(step));
 }
 
 Box<ExprAST> Parser::log_err(StringRef msg) {

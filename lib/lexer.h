@@ -15,9 +15,12 @@ enum Token {
   TK_DEF = -11,
   TK_EXTERN = -12,
 
-  // Keywords
+  // Keywords/Operators
   TK_IF = -21,
   TK_ELSE = -22,
+  TK_FOR = -23,
+  TK_IN = -24,
+  TK_DOT2 = -25,
 
   // Primary
   TK_IDENT = -51,

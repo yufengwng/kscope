@@ -93,7 +93,7 @@ Function* Emitter::emit_proto(const PrototypeAST* proto) {
 
 Function* Emitter::emit_def(const FunctionAST* def) {
   auto* proto = def->proto();
-  protos_[proto->name()] = def->copy_proto();
+  protos_[proto->name()] = def->clone_proto();
   auto* fn = lookup_fn(proto->name());
   if (!fn) {
     return nullptr;
@@ -157,6 +157,8 @@ Value* Emitter::emit_expr(const ExprAST* expr) {
     return emit_call_expr(call);
   } else if (auto* ifexpr = dyn_cast<IfExprAST>(expr)) {
     return emit_if_expr(ifexpr);
+  } else if (auto* forexpr = dyn_cast<ForExprAST>(expr)) {
+    return emit_for_expr(forexpr);
   } else {
     return nullptr;
   }
@@ -265,6 +267,104 @@ Value* Emitter::emit_if_expr(const IfExprAST* ifexpr) {
   phi->addIncoming(else_val, bb_else);
 
   return phi;
+}
+
+Value* Emitter::emit_for_expr(const ForExprAST* forexpr) {
+  auto& var_name = forexpr->itervar();
+  auto* zero_val = ConstantFP::get(*ctx_, APFloat(0.0));
+
+  // Create blocks for the loop.
+  auto* fn = builder_->GetInsertBlock()->getParent();
+  auto* bb_preheader = BasicBlock::Create(*ctx_, "loop.pre");
+  auto* bb_loop_cond = BasicBlock::Create(*ctx_, "loop.cond");
+  auto* bb_cond_less = BasicBlock::Create(*ctx_, "loop.cond.less");
+  auto* bb_cond_else = BasicBlock::Create(*ctx_, "loop.cond.else");
+  auto* bb_loop_body = BasicBlock::Create(*ctx_, "loop.body");
+  auto* bb_loop_post = BasicBlock::Create(*ctx_, "loop.post");
+  auto* bb_loop_end = BasicBlock::Create(*ctx_, "loop.end");
+
+  // Start the loop preheader.
+  fn->getBasicBlockList().push_back(bb_preheader);
+  builder_->CreateBr(bb_preheader);
+  builder_->SetInsertPoint(bb_preheader);
+
+  // Emit the range bounds (these are evaluated once).
+  auto* init_val = emit_expr(forexpr->init_expr());
+  if (!init_val) {
+    return nullptr;
+  }
+  auto* stop_val = emit_expr(forexpr->stop_expr());
+  if (!stop_val) {
+    return nullptr;
+  }
+  Value* step_val;
+  if (forexpr->has_step()) {
+    step_val = emit_expr(forexpr->step_expr());
+    if (!step_val) {
+      return nullptr;
+    }
+  } else {
+    step_val = ConstantFP::get(*ctx_, APFloat(ForExprAST::DEFAULT_STEP));
+  }
+  bb_preheader = builder_->GetInsertBlock();
+
+  // Start loop condition block.
+  fn->getBasicBlockList().push_back(bb_loop_cond);
+  builder_->CreateBr(bb_loop_cond);
+  builder_->SetInsertPoint(bb_loop_cond);
+
+  // Emit the phi node for the itervar.
+  auto* iter_phi = builder_->CreatePHI(Type::getDoubleTy(*ctx_), 2, var_name);
+  iter_phi->addIncoming(init_val, bb_preheader);
+
+  // Save variable in case it is shadowed by the itervar.
+  auto* old_val = locals_[var_name];
+  locals_[var_name] = iter_phi;
+
+  // Check range condition based on step direction.
+  auto* cmp = builder_->CreateFCmpULT(step_val, zero_val);
+  builder_->CreateCondBr(cmp, bb_cond_less, bb_cond_else);
+
+  // if step < 0 then execute loop if iter > stop
+  fn->getBasicBlockList().push_back(bb_cond_less);
+  builder_->SetInsertPoint(bb_cond_less);
+  cmp = builder_->CreateFCmpUGT(iter_phi, stop_val);
+  builder_->CreateCondBr(cmp, bb_loop_body, bb_loop_end);
+
+  // if step >= 0 then execute loop if iter < stop
+  fn->getBasicBlockList().push_back(bb_cond_else);
+  builder_->SetInsertPoint(bb_cond_else);
+  cmp = builder_->CreateFCmpULT(iter_phi, stop_val);
+  builder_->CreateCondBr(cmp, bb_loop_body, bb_loop_end);
+
+  // Emit the loop body. Its value is ignored.
+  fn->getBasicBlockList().push_back(bb_loop_body);
+  builder_->SetInsertPoint(bb_loop_body);
+  if (!emit_expr(forexpr->body_expr())) {
+    return nullptr;
+  }
+  builder_->CreateBr(bb_loop_post);
+
+  // Emit the step and add backedge.
+  fn->getBasicBlockList().push_back(bb_loop_post);
+  builder_->SetInsertPoint(bb_loop_post);
+  auto* next_val = builder_->CreateFAdd(iter_phi, step_val, "next");
+  iter_phi->addIncoming(next_val, bb_loop_post);
+  builder_->CreateBr(bb_loop_cond);
+
+  // Rest of codegen goes in the loop end.
+  fn->getBasicBlockList().push_back(bb_loop_end);
+  builder_->SetInsertPoint(bb_loop_end);
+
+  // Restore the shadowed variable, if any.
+  if (old_val) {
+    locals_[var_name] = old_val;
+  } else {
+    locals_.erase(var_name);
+  }
+
+  // For now, for/in expression always returns zero.
+  return zero_val;
 }
 
 Value* Emitter::log_err(StringRef msg) {

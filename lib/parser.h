@@ -38,16 +38,19 @@ private:
   Box<ExprAST> parse_expr();
   /// bin_rhs ::= (OP primary)*
   Box<ExprAST> parse_bin_rhs(int prec, Box<ExprAST> lhs);
-  /// primary ::= ident_expr | num_expr | paren_expr | if_expr
+  /// primary ::= ident_expr | num_expr | paren_expr
+  ///           | if_expr | for_expr
   Box<ExprAST> parse_primary();
   /// ident_expr ::= ident | ident '(' expr* ')'
-  Box<ExprAST> parse_ident_expr();
+  Box<ExprAST> parse_ident_or_call_expr();
   /// num_expr ::= number
   Box<ExprAST> parse_num_expr();
   /// paren_expr ::= '(' expr ')'
   Box<ExprAST> parse_paren_expr();
   /// if_expr ::= 'if' expr ':' expr 'else' expr
   Box<ExprAST> parse_if_expr();
+  /// for_expr ::= 'for' ident 'in' expr '..' expr (',' expr)? ':' expr
+  Box<ExprAST> parse_for_expr();
 
   /// Helper for error handling.
   Box<ExprAST> log_err(llvm::StringRef msg);

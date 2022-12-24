@@ -18,6 +18,16 @@ int Lexer::scan_token() {
     last_char_ = next_char();
   }
 
+  // Operators.
+  if (last_char_ == '.') {
+    // Look for .. (range, dot-dot).
+    if (peek_char() == '.') {
+      next_char(); // Consume '..'.
+      last_char_ = next_char();
+      return TK_DOT2;
+    }
+  }
+
   // Identifier: [a-zA-Z][a-zA-Z0-9_]*
   if (std::isalpha(last_char_)) {
     ident_str_ = "";
@@ -33,6 +43,10 @@ int Lexer::scan_token() {
       return TK_IF;
     } else if (ident_str_ == "else") {
       return TK_ELSE;
+    } else if (ident_str_ == "for") {
+      return TK_FOR;
+    } else if (ident_str_ == "in") {
+      return TK_IN;
     } else {
       return TK_IDENT;
     }

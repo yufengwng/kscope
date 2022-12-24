@@ -14,6 +14,7 @@ public:
     IK_FUNC,
     IK_EXPR_,
     IK_IF_EXPR,
+    IK_FOR_EXPR,
     IK_NUM_EXPR,
     IK_VAR_EXPR,
     IK_BIN_EXPR,
@@ -73,7 +74,7 @@ public:
 
   FunctionAST(Box<PrototypeAST> proto, Box<ExprAST> body);
 
-  Box<PrototypeAST> copy_proto() const;
+  Box<PrototypeAST> clone_proto() const;
 
   const PrototypeAST* proto() const {
     return proto_.get();
@@ -210,6 +211,49 @@ public:
 
 private:
   Box<ExprAST> cond_, then_, else_;
+};
+
+/// Represents a for/in loop expression.
+class ForExprAST : public ExprAST {
+public:
+  inline static double DEFAULT_STEP = 1.0;
+
+  static bool classof(const ItemAST* item) {
+    return item->kind() == IK_FOR_EXPR;
+  }
+
+  ForExprAST(const std::string& itervar_name,
+             Box<ExprAST> init_val, Box<ExprAST> stop_val,
+             Box<ExprAST> body_expr, Box<ExprAST> step_val = nullptr);
+
+  const std::string& itervar() const {
+    return itervar_;
+  }
+
+  const ExprAST* init_expr() const {
+    return init_.get();
+  }
+
+  const ExprAST* stop_expr() const {
+    return stop_.get();
+  }
+
+  const ExprAST* body_expr() const {
+    return body_.get();
+  }
+
+  bool has_step() const {
+    return step_ != nullptr;
+  }
+
+  const ExprAST* step_expr() const {
+    return step_ ? step_.get() : nullptr;
+  }
+
+private:
+  std::string itervar_;
+  Box<ExprAST> init_, stop_, body_;
+  Box<ExprAST> step_;  // Optional.
 };
 
 } // namespace kscope

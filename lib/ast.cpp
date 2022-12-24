@@ -14,7 +14,7 @@ Box<FunctionAST> FunctionAST::make_anon(Box<ExprAST> expr) {
   return std::make_unique<FunctionAST>(std::move(anon_proto), std::move(expr));
 }
 
-Box<PrototypeAST> FunctionAST::copy_proto() const {
+Box<PrototypeAST> FunctionAST::clone_proto() const {
   std::vector<std::string> args(proto_->args());
   return std::make_unique<PrototypeAST>(proto_->name(), args);
 }
@@ -36,5 +36,15 @@ IfExprAST::IfExprAST(Box<ExprAST> cond, Box<ExprAST> then_case, Box<ExprAST> els
       cond_(std::move(cond)),
       then_(std::move(then_case)),
       else_(std::move(else_case)) {}
+
+ForExprAST::ForExprAST(const std::string& itervar_name,
+                       Box<ExprAST> init_val, Box<ExprAST> stop_val,
+                       Box<ExprAST> body_expr, Box<ExprAST> step_val)
+    : ExprAST(IK_FOR_EXPR),
+      itervar_(itervar_name),
+      init_(std::move(init_val)),
+      stop_(std::move(stop_val)),
+      body_(std::move(body_expr)),
+      step_(std::move(step_val)) {}
 
 } // namespace kscope
